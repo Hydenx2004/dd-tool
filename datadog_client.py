@@ -9,6 +9,8 @@ Handles all interactions with the Datadog API:
 import sys
 from datetime import datetime, timedelta, timezone
 
+import time
+
 import requests
 import urllib3
 
@@ -229,18 +231,34 @@ class DatadogClient:
     #  Internal HTTP helper
     # ──────────────────────────────────────────────
 
-    def _request(self, method, url, json_body=None):
+    def _request(self, method, url, json_body=None, max_retries=3):
         """
-        Make an HTTP request to the Datadog API.
+        Make an HTTP request to the Datadog API with retry logic.
         Raises on non-2xx responses with a helpful error message.
         """
-        resp = requests.request(
-            method=method,
-            url=url,
-            headers=self.headers,
-            json=json_body,
-            verify=False,
-        )
+        print(f"   🌐 {method} {url}")
+        for attempt in range(1, max_retries + 1):
+            try:
+                resp = requests.request(
+                    method=method,
+                    url=url,
+                    headers=self.headers,
+                    json=json_body,
+                    verify=False,
+                    timeout=120,
+                )
+                print(f"   ← {resp.status_code} ({resp.elapsed.total_seconds():.2f}s)")
+                break
+            except (requests.exceptions.ConnectionError,
+                    requests.exceptions.SSLError,
+                    requests.exceptions.ReadTimeout) as e:
+                if attempt < max_retries:
+                    wait = 2 ** attempt
+                    print(f"   ⚠️  {type(e).__name__} (attempt {attempt}/{max_retries}), retrying in {wait}s...")
+                    time.sleep(wait)
+                else:
+                    print(f"   ❌ Failed after {max_retries} attempts: {e}")
+                    raise
 
         if not resp.ok:
             error_detail = ""

@@ -64,7 +64,7 @@ def get_config():
         # User inputs: CLI args take priority over env vars
         "query": args.query or os.getenv("QUERY"),
         "keys": _parse_keys(args.keys or os.getenv("KEYS")),
-        "days_lookback": args.days or int(os.getenv("DAYS_LOOKBACK", "7")),
+        "days_lookback": min(args.days or int(os.getenv("DAYS_LOOKBACK", "7")), 7),
         "dry_run": args.dry_run,
     }
 
