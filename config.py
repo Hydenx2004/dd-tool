@@ -44,6 +44,11 @@ def parse_args():
         action="store_true",
         help="Print actions without making any changes to Datadog",
     )
+    parser.add_argument(
+        "--skip-verification",
+        action="store_true",
+        help="Skip log verification and create pipeline blindly",
+    )
     return parser.parse_args()
 
 
@@ -66,6 +71,7 @@ def get_config():
         "keys": _parse_keys(args.keys or os.getenv("KEYS")),
         "days_lookback": min(args.days or int(os.getenv("DAYS_LOOKBACK", "7")), 7),
         "dry_run": args.dry_run,
+        "skip_verification": args.skip_verification or os.getenv("SKIP_VERIFICATION", "").lower() == "true",
     }
 
     # Validate required fields

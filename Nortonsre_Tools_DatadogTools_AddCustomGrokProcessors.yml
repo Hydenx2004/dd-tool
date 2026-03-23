@@ -1,0 +1,10 @@
+includes:
+  - /shared/default.yml
+allowed:
+  - ports: 443
+    protocols: https
+    cached: false
+    methods: GET POST PUT HEAD
+    urls:
+      - url: datadog.com
+      - url: api.datadoghq.com

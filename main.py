@@ -51,6 +51,7 @@ def main():
     print(f"   Keys:         {config['keys']}")
     print(f"   Days:         {config['days_lookback']}")
     print(f"   Dry Run:      {config['dry_run']}")
+    print(f"   Skip Verify:  {config['skip_verification']}")
 
     # Initialize Datadog client
     client = DatadogClient(
@@ -69,64 +70,73 @@ def main():
     print(f"   Storage Tier:{' 🗄️  flex (non-prod)' if storage_tier == 'flex' else ' 📦 indexes (prod)'}")
 
     # ──────────────────────────────────────────
-    #  Step 2: Validate the query
+    #  Step 2: Validate the query (skip if --skip-verification)
     # ──────────────────────────────────────────
-    print("\n" + "─" * 60)
-    print("  Step 1: Validate Query")
-    print("─" * 60)
+    if config["skip_verification"]:
+        print("\n" + "─" * 60)
+        print("  Step 1: Validate Query")
+        print("─" * 60)
+        print("\n   ⏭️  Skipping log verification (--skip-verification flag set)")
+        keys_with_logs = config["keys"]
+        keys_without_logs = []
+    else:
+        print("\n" + "─" * 60)
+        print("  Step 1: Validate Query")
+        print("─" * 60)
 
-    print(f"\n   Query: {query}")
-    print(f"   Searching {storage_tier.upper()} tier for the last "
-          f"{config['days_lookback']} day(s)...", end=" ")
+        print(f"\n   Query: {query}")
+        print(f"   Searching {storage_tier.upper()} tier for the last "
+              f"{config['days_lookback']} day(s)...", end=" ")
 
-    has_logs = client.validate_query(query, config["days_lookback"], storage_tier)
+        has_logs = client.validate_query(query, config["days_lookback"], storage_tier)
 
-    if not has_logs:
-        print("❌ no logs found!")
-        print(f"\n   ❌ The query returned 0 logs in the last {config['days_lookback']} day(s).")
-        print(f"   Please check if the query is correct or increase the lookback days.")
-        print(f"\n   Query used:  {query}")
-        print(f"   Days:        {config['days_lookback']}")
-        print(f"   Tier:        {storage_tier}")
-        sys.exit(1)
+        if not has_logs:
+            print("❌ no logs found!")
+            print(f"\n   ❌ The query returned 0 logs in the last {config['days_lookback']} day(s).")
+            print(f"   Please check if the query is correct or increase the lookback days.")
+            print(f"\n   Query used:  {query}")
+            print(f"   Days:        {config['days_lookback']}")
+            print(f"   Tier:        {storage_tier}")
+            sys.exit(1)
 
-    print("✅ logs found!")
+        print("✅ logs found!")
 
-    # ──────────────────────────────────────────
-    #  Step 3: Check if keys have logs
-    # ──────────────────────────────────────────
-    print("\n" + "─" * 60)
-    print("  Step 2: Verify Keys Have Logs")
-    print("─" * 60)
-    print(f"\n   Checking {len(config['keys'])} key(s) against query...\n")
+        # ──────────────────────────────────────────
+        #  Step 3: Check if keys have logs
+        # ──────────────────────────────────────────
+        print("\n" + "─" * 60)
+        print("  Step 2: Verify Keys Have Logs")
+        print("─" * 60)
+        print(f"\n   Checking {len(config['keys'])} key(s) against query...\n")
 
-    keys_with_logs, keys_without_logs = client.check_keys_for_logs(
-        query=query,
-        keys=config["keys"],
-        days_lookback=config["days_lookback"],
-        storage_tier=storage_tier,
-    )
+        keys_with_logs, keys_without_logs = client.check_keys_for_logs(
+            query=query,
+            keys=config["keys"],
+            days_lookback=config["days_lookback"],
+            storage_tier=storage_tier,
+        )
 
-    # Report keys without logs
-    if keys_without_logs:
-        print(f"\n   ⚠️  The following key(s) have NO logs in the last "
-              f"{config['days_lookback']} day(s):")
-        for key in keys_without_logs:
-            print(f"      • {key}")
-        print("   These keys will be SKIPPED (no grok rules created for them).")
+        # Report keys without logs
+        if keys_without_logs:
+            print(f"\n   ⚠️  The following key(s) have NO logs in the last "
+                  f"{config['days_lookback']} day(s):")
+            for key in keys_without_logs:
+                print(f"      • {key}")
+            print("   These keys will be SKIPPED (no grok rules created for them).")
 
-    # Check if we have any valid keys left
-    if not keys_with_logs:
-        print("\n   ❌ None of the provided keys have logs. Nothing to do.")
-        sys.exit(1)
+        # Check if we have any valid keys left
+        if not keys_with_logs:
+            print("\n   ❌ None of the provided keys have logs. Nothing to do.")
+            sys.exit(1)
 
-    print(f"\n   ✅ Proceeding with {len(keys_with_logs)} key(s): {keys_with_logs}")
+        print(f"\n   ✅ Proceeding with {len(keys_with_logs)} key(s): {keys_with_logs}")
 
     # ──────────────────────────────────────────
     #  Step 4: Build grok parser rules
     # ──────────────────────────────────────────
+    step_num = "3" if config["skip_verification"] else "3"
     print("\n" + "─" * 60)
-    print("  Step 3: Build Grok Parser Rules")
+    print(f"  Step {step_num}: Build Grok Parser Rules")
     print("─" * 60)
 
     processors = build_grok_processors(keys_with_logs)
@@ -137,8 +147,9 @@ def main():
     # ──────────────────────────────────────────
     pipeline_name = build_pipeline_name(query)
 
+    step_num = "4" if config["skip_verification"] else "4"
     print("─" * 60)
-    print("  Step 4: Create New Pipeline")
+    print(f"  Step {step_num}: Create New Pipeline")
     print("─" * 60)
 
     print(f"\n   Pipeline Name: {pipeline_name}")

@@ -85,15 +85,12 @@ def _build_quoted_rules(key):
       - start: key at the beginning of the log line
       - boundary: key preceded by a delimiter (space, brace, etc.)
     """
-    start_name = f"extract_quoted_{key}_start"
     start_pattern = f'"?{key}"?\\s*[=:]\\s*"%{{data:{key}}}"%{{data}}'
-
-    bound_name = f"extract_quoted_{key}"
     bound_pattern = f'%{{data}}%{{_pre}}"?{key}"?\\s*[=:]\\s*"%{{data:{key}}}"%{{data}}'
 
     return [
-        f"{start_name} {start_pattern}",
-        f"{bound_name} {bound_pattern}",
+        f"rule_1 {start_pattern}",
+        f"rule_2 {bound_pattern}",
     ]
 
 
@@ -110,15 +107,12 @@ def _build_kv_rules(key):
       - start: key at the beginning of the log line
       - boundary: key preceded by a delimiter
     """
-    start_name = f"extract_kv_{key}_start"
     start_pattern = f'{key}=%{{_val:{key}}}%{{data}}'
-
-    bound_name = f"extract_kv_{key}"
     bound_pattern = f'%{{data}}%{{_pre}}{key}=%{{_val:{key}}}%{{data}}'
 
     return [
-        f"{start_name} {start_pattern}",
-        f"{bound_name} {bound_pattern}",
+        f"rule_3 {start_pattern}",
+        f"rule_4 {bound_pattern}",
     ]
 
 
@@ -135,15 +129,12 @@ def _build_unquoted_rules(key):
       - start: key at the beginning of the log line
       - boundary: key preceded by a delimiter
     """
-    start_name = f"extract_unquoted_{key}_start"
     start_pattern = f'"?{key}"?\\s*[=:]\\s*%{{_val:{key}}}%{{data}}'
-
-    bound_name = f"extract_unquoted_{key}"
     bound_pattern = f'%{{data}}%{{_pre}}"?{key}"?\\s*[=:]\\s*%{{_val:{key}}}%{{data}}'
 
     return [
-        f"{start_name} {start_pattern}",
-        f"{bound_name} {bound_pattern}",
+        f"rule_5 {start_pattern}",
+        f"rule_6 {bound_pattern}",
     ]
 
 
